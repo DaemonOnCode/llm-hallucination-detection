@@ -1,7 +1,7 @@
 "use client";
 import Dropdown from "@/components/dropdown";
 import ModalWithTabs from "@/components/modal";
-import { GenerationType } from "@/utils/constants";
+import { API_URL, GenerationType } from "@/utils/constants";
 import { useRef, useState } from "react";
 
 export default function Home() {
@@ -55,7 +55,7 @@ export default function Home() {
     console.log("Form data", [...formData.entries()]);
 
     try {
-      const res = await fetch("http://localhost:5000/api/process", {
+      const res = await fetch(API_URL+"api/process", {
         method: "POST",
         body: formData,
       });
