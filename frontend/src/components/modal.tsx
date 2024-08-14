@@ -9,7 +9,11 @@ const ModalWithTabs = ({ isOpen, onClose, data }) => {
     explanation: {
       val: (
         <>
-          <p>{data.explanation}</p>
+          <p
+            dangerouslySetInnerHTML={{
+              __html: data.explanation.replace(/(?:\r\n|\r|\n)/g, "<br>"),
+            }}
+          />
         </>
       ),
     },

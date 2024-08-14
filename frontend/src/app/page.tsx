@@ -55,11 +55,16 @@ export default function Home() {
     console.log("Form data", [...formData.entries()]);
 
     try {
-      const res = await fetch(API_URL+"api/process", {
+      const res = await fetch("/api/process", {
         method: "POST",
         body: formData,
       });
       const data = await res.json();
+      if (res.status !== 200) {
+        setLoading(false);
+        console.log(data.error);
+        return;
+      }
       console.log(data);
 
       setResultData(data);
