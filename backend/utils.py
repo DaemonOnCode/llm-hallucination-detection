@@ -1,6 +1,7 @@
 from collections import Counter
 import pypdf
 import docx
+import spacy
 
 class FileReader:
     def __init__(self, file_path):
@@ -39,3 +40,14 @@ def max_occuring_value(s):
     max_val = max(counts, key=counts.get)
     
     return max_val
+
+def noun_extractor(text):
+    nlp = spacy.load("en_core_web_sm")
+    doc = nlp(text)
+    nouns = []
+    for token in doc:
+        if token.pos_ == "NOUN":
+            nouns.append(token.text)
+    entities = [ent.text for ent in doc.ents]
+    nsubj = [token.text for token in doc if token.dep_ == "nsubj"]
+    return list(set(nouns+entities+nsubj))

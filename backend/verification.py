@@ -3,25 +3,26 @@ import spacy
 import torch
 from transformers import AutoTokenizer, XLMRobertaForSequenceClassification
 
+from llm import LLMRunner
+
 class FactChecker:
     def __init__(self):
         self.nlp = spacy.load("en_core_web_sm")
 
     def verify_facts(self, claims, documents):
-        print("Checking contradictions", claims, documents)
-
         results = []
 
         for claim in claims:
             for document in documents:
-                claim = " ".join(claim)
-                print(self.textual_similarity_check(claim, document))
-                print(self.contradiction_check(claim, document))
+                torch.cuda.empty_cache()
+                tsc_result = self.textual_similarity_check(claim, document)
+                cc_result = self.contradiction_check_llm(claim, document)
+                print("Contradiction check result", cc_result, tsc_result)
                 results.append({
                     "claim": claim,
                     "document": document,
-                    "textual_similarity": self.textual_similarity_check(claim, document),
-                    "contradiction": self.contradiction_check(claim, document)
+                    "textual_similarity": tsc_result,
+                    "contradiction": cc_result
                 })
 
         return results
@@ -29,8 +30,8 @@ class FactChecker:
         
     
     def textual_similarity_check(self, claim, document):
-        model = SentenceTransformer("all-mpnet-base-v2")
-        # model = SentenceTransformer("all-MiniLM-L6-v2")
+        # model = SentenceTransformer("all-mpnet-base-v2")
+        model = SentenceTransformer("all-MiniLM-L6-v2")
         embeddings_claim = model.encode(claim)
         embeddings_doc = model.encode(document)
         similarities = model.similarity(embeddings_claim, embeddings_doc)
@@ -66,7 +67,7 @@ class FactChecker:
 
         tokenizer = AutoTokenizer.from_pretrained(model_name)
 
-        print("Premise and hypothesis", premise, hypothesis)
+        # print("Premise and hypothesis", premise, hypothesis)
 
         input_ids_, token_type_ids_, attention_masks_ = self.preprocess(
             {
@@ -94,3 +95,17 @@ class FactChecker:
         }
 
         return labels[predicted_labels[0]]
+    
+    def contradiction_check_llm(self, premise, hypothesis):
+        llmrunner = LLMRunner("ollama", model_name="mistral:7b-instruct", max_tokens = 500)
+        prompt = f"Find out if the given premise and hypothesis are Entailment, Neutral, Contradiction where entailment means the hypothesis follows the logic of the premise, contradiction means the hypothesis does not follow the logic of the premise and neutral means the hypothesis is not related to the premise; the output should be in the format <entailment or neutral or contradiction>: {premise} {hypothesis}"
+        contradiction = llmrunner.run(prompt)
+        contradiction = contradiction.replace("<", "").replace(">", "").strip().lower()[:len("contradiction")]
+        if contradiction.find("entailment")!= -1:
+            return "entailment"
+        elif contradiction.find("neutral")!= -1:
+            return "neutral"
+        elif contradiction.find("contradiction")!= -1:
+            return "contradiction"
+        else:
+            return "neutral"

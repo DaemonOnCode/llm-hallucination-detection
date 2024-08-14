@@ -11,21 +11,23 @@ class LLMRunner:
         self.api_key = api_key
         self.max_tokens = max_tokens
 
-    def run_ollama(self, prompt):
-        print("Running OLLAMA", self.model_name, prompt)
-        res = requests.post("http://localhost:11434/api/generate", 
-        headers={"Content-Type": "application/json"},
-        data=json.dumps({
+    def run_ollama(self, prompt, **kwargs):
+        print("Running OLLAMA", self.model_name, prompt, kwargs)
+        data = {
             "model": self.model_name,
             "prompt": prompt,
             "stream": False,
             "options": {
-                "num_predict": self.max_tokens
+                "num_predict": self.max_tokens,
             }
-        }))        
+        }
+        data.update(kwargs)
+        res = requests.post("http://localhost:11434/api/generate", 
+        headers={"Content-Type": "application/json"},
+        data=json.dumps(data))        
         return res.json()["response"]
 
-    def run_openai(self, prompt):
+    def run_openai(self, prompt, **kwargs):
         openai = OpenAI(self.api_key)
         messages = [{"role": "user", "content": prompt}]
         response = openai.chat.completions.create(
@@ -35,7 +37,7 @@ class LLMRunner:
         )
         return response.choices[0].text.strip()
     
-    def run_huggingface(self, prompt):
+    def run_huggingface(self, prompt, **kwargs):
         tokenizer = AutoTokenizer.from_pretrained(self.model_name)
         model = AutoModelForCausalLM.from_pretrained(self.model_name)
 
@@ -45,13 +47,13 @@ class LLMRunner:
         response = tokenizer.decode(outputs[0], skip_special_tokens=True)
         return response
     
-    def run(self, prompt):
+    def run(self, prompt, **kwargs):
         print("Running LLM", self.model_type, self.model_name)
         if self.model_type == "ollama":
-            return self.run_ollama(prompt)
+            return self.run_ollama(prompt, **kwargs)
         elif self.model_type == "openai":
-            return self.run_openai(prompt)
+            return self.run_openai(prompt, **kwargs)
         elif self.model_type == "hf":
-            return self.run_huggingface(prompt)
+            return self.run_huggingface(prompt, **kwargs)
         else:
             raise ValueError("Unsupported model type.")
